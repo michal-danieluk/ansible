@@ -1,0 +1,13 @@
+- name: Brave Browser yay installation
+  #become: true
+  #   community.general.pacman:
+  #     # update_cache: false
+  #     name: brave-bin
+  #     state: installed
+  #     executable: yay
+  #       #  extra_args: --builddir /var/cache/yay
+  #       #- name: Install package_name_1 and package_name_2 using yay
+  kewlfft.aur.aur:
+    use: yay
+    name:
+      - brave-bin

@@ -1,0 +1,8 @@
+- hosts: localhost
+  tasks:
+    #        - name: Run the equivalent of "pacman -Syu" as a separate step
+    #          community.general.pacman:
+    #             update_cache: false
+    #             upgrade: true
+    #
+     - include_tasks: tasks/zsh.yml
