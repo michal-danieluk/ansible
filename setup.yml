@@ -34,6 +34,7 @@
           - jq
           - httpie
           - btop
+          - eza # Now available in Ubuntu 24.04 apt repos
         state: present
 
     - name: Symlink fd-find to fd
