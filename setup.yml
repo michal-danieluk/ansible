@@ -30,6 +30,10 @@
           - bat
           - tmux
           - fzf
+          - ncdu
+          - jq
+          - httpie
+          - btop
         state: present
 
     - name: Symlink fd-find to fd
@@ -84,6 +88,43 @@
         name: eza
         state: latest
         update_cache: yes
+
+    # --- GitHub CLI Setup ---
+    - name: Download GitHub CLI GPG key
+      get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+        mode: '0644'
+
+    - name: Add GitHub CLI repository
+      apt_repository:
+        repo: "deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }} signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+        state: present
+        filename: github-cli
+
+    - name: Install GitHub CLI
+      apt:
+        name: gh
+        state: latest
+        update_cache: yes
+
+    # --- LazyGit Setup ---
+    - name: Install LazyGit
+      shell: |
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+        tar xf lazygit.tar.gz lazygit
+        install lazygit /usr/local/bin
+        rm lazygit lazygit.tar.gz
+      args:
+        creates: /usr/local/bin/lazygit
+
+    # --- YQ Setup ---
+    - name: Install yq
+      get_url:
+        url: https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        dest: /usr/local/bin/yq
+        mode: '0755'
 
     - name: Create user {{ user_name }}
       user:
