@@ -96,11 +96,21 @@
       become: yes
       become_user: "{{ user_name }}"
 
+    - name: Ensure ASDF directory ownership
+      file:
+        path: "{{ asdf_dir }}"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        recurse: yes
+
     - name: Clone ASDF
       git:
         repo: https://github.com/asdf-vm/asdf.git
         dest: "{{ asdf_dir }}"
-        version: v0.14.0  # Warto spinować wersję
+        version: v0.14.0
+      become: yes
+      become_user: "{{ user_name }}"
 
     - name: Add ASDF to .zshrc
       lineinfile:
