@@ -201,3 +201,32 @@
         gem install rails
       become: yes
       become_user: "{{ user_name }}"
+
+    - name: Configure Git Global User Name
+      git_config:
+        name: user.name
+        scope: global
+        value: "Michal Danieluk"
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Configure Git Global Email
+      git_config:
+        name: user.email
+        scope: global
+        value: "michal.danieluk@gmail.com"
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Test GitHub SSH Connection
+      shell: "ssh -T git@github.com"
+      become: yes
+      become_user: "{{ user_name }}"
+      register: github_ssh_test
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Display GitHub Connection Status
+      debug:
+        msg: "{{ 'GitHub Connection Successful!' if 'successfully authenticated' in github_ssh_test.stderr else 'GitHub Connection FAILED! Check SSH keys.' }}"
+
