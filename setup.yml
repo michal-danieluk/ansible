@@ -169,6 +169,13 @@
         group: "{{ user_name }}"
         mode: '0755'
 
+    - name: Ensure Tmux Plugin Manager (TPM) is installed
+      git:
+        repo: https://github.com/tmux-plugins/tpm
+        dest: "{{ user_home }}/.tmux/plugins/tpm"
+      become: yes
+      become_user: "{{ user_name }}"
+
     - name: Copy decrypted SSH backup to server
       copy:
         src: "{{ ssh_backup_file }}"
