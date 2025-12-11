@@ -25,7 +25,26 @@
           - software-properties-common
           - docker.io  # Potrzebne, żeby istniała grupa docker
           - stow
+          - ripgrep
+          - fd-find
+          - bat
+          - tmux
+          - fzf
         state: present
+
+    - name: Symlink fd-find to fd
+      file:
+        src: /usr/bin/fdfind
+        dest: /usr/local/bin/fd
+        state: link
+        force: yes
+
+    - name: Symlink batcat to bat
+      file:
+        src: /usr/bin/batcat
+        dest: /usr/local/bin/bat
+        state: link
+        force: yes
 
     - name: Add Neovim PPA (unstable)
       ansible.builtin.apt_repository:
@@ -36,6 +55,35 @@
       apt:
         name: neovim
         state: latest
+
+    - name: Install zoxide
+      apt:
+        name: zoxide
+        state: present
+
+    - name: Prepare directory for eza keyring
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download eza GPG key
+      get_url:
+        url: https://raw.githubusercontent.com/eza-community/eza/main/deb.asc
+        dest: /etc/apt/keyrings/gierens.gpg
+        mode: '0644'
+
+    - name: Add eza repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main"
+        state: present
+        filename: eza
+
+    - name: Install eza
+      apt:
+        name: eza
+        state: latest
+        update_cache: yes
 
     - name: Create user {{ user_name }}
       user:
@@ -52,6 +100,26 @@
         create: yes
         mode: '0440'
         validate: 'visudo -cf %s'
+
+    - name: Configure Docker Log Rotation (Critical for Mikrus)
+      copy:
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }
+        dest: /etc/docker/daemon.json
+      notify: Restart Docker
+
+    - name: Copy local .tmux.conf
+      copy:
+        src: .tmux.conf
+        dest: "{{ user_home }}/.tmux.conf"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
 
     - name: Copy decrypted SSH backup to server
       copy:
@@ -229,4 +297,10 @@
     - name: Display GitHub Connection Status
       debug:
         msg: "{{ 'GitHub Connection Successful!' if 'successfully authenticated' in github_ssh_test.stderr else 'GitHub Connection FAILED! Check SSH keys.' }}"
+
+  handlers:
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
 
