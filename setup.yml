@@ -251,6 +251,14 @@
       become: yes
       become_user: "{{ user_name }}"
 
+    - name: Install AI CLI Tools (Claude Code, Gemini CLI)
+      shell: |
+        export ASDF_DIR="{{ asdf_dir }}"
+        . "{{ asdf_dir }}/asdf.sh"
+        npm install -g @anthropic-ai/claude-code @google/gemini-cli
+      become: yes
+      become_user: "{{ user_name }}"
+
     - name: Install Latest Ruby (ASYNC - High Timeout for Mikrus)
       shell: |
         export ASDF_DIR="{{ asdf_dir }}"
