@@ -1,0 +1,11 @@
+# Ansible
+*.retry
+*.log
+
+# Sensitive Data / Backups
+ssh_backup.tar.gz
+ssh-backup.tar.gz
+*.tar.gz
+
+# System
+.DS_Store
