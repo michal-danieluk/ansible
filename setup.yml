@@ -113,7 +113,9 @@
       shell: |
         export ASDF_DIR="{{ asdf_dir }}"
         . "{{ asdf_dir }}/asdf.sh"
-        asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git || exit 0
+        asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+      args:
+        creates: "{{ asdf_dir }}/plugins/nodejs"
       become: yes
       become_user: "{{ user_name }}"
 
@@ -121,7 +123,9 @@
       shell: |
         export ASDF_DIR="{{ asdf_dir }}"
         . "{{ asdf_dir }}/asdf.sh"
-        asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git || exit 0
+        asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git
+      args:
+        creates: "{{ asdf_dir }}/plugins/ruby"
       become: yes
       become_user: "{{ user_name }}"
 
