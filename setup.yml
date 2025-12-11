@@ -4,7 +4,6 @@
   vars:
     user_name: "wdek"
     user_home: "/home/{{ user_name }}"
-    asdf_dir: "{{ user_home }}/.asdf"
     # Pamiętaj, żeby podać --ask-vault-pass przy uruchamianiu playbooka
     ssh_backup_file: "ssh_backup.tar.gz"
 
@@ -95,13 +94,6 @@
         rm lazygit lazygit.tar.gz
       args:
         creates: /usr/local/bin/lazygit
-
-    # --- YQ Setup ---
-    - name: Install yq
-      get_url:
-        url: https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-        dest: /usr/local/bin/yq
-        mode: '0755'
 
     # --- Development Repositories ---
     - name: Ensure ~/dev directory exists
@@ -254,26 +246,22 @@
       become: yes
       become_user: "{{ user_name }}"
 
-    - name: Ensure ASDF directory ownership
-      file:
-        path: "{{ asdf_dir }}"
-        state: directory
-        owner: "{{ user_name }}"
-        group: "{{ user_name }}"
-        recurse: yes
+    - name: Check if mise is installed
+      shell: "command -v mise"
+      register: mise_check
+      ignore_errors: yes
+      changed_when: false
 
-    - name: Clone ASDF
-      git:
-        repo: https://github.com/asdf-vm/asdf.git
-        dest: "{{ asdf_dir }}"
-        version: v0.14.0
+    - name: Install mise (if not installed)
+      shell: "curl https://mise.run | sh"
+      when: mise_check.rc != 0
       become: yes
       become_user: "{{ user_name }}"
 
-    - name: Add ASDF to .zshrc
+    - name: Add mise to .zshrc
       lineinfile:
         path: "{{ user_home }}/.zshrc"
-        line: '. "$HOME/.asdf/asdf.sh"'
+        line: 'eval "$(~/.local/bin/mise activate zsh)"'
         create: yes
         owner: "{{ user_name }}"
 
@@ -289,32 +277,33 @@
         create: yes
         owner: "{{ user_name }}"
 
+    - name: Copy starship.toml configuration
+      copy:
+        src: files/starship.toml
+        dest: "{{ user_home }}/.config/starship.toml"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0644'
 
-    - name: Add Nodejs plugin to ASDF
-      shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
-      args:
-        creates: "{{ asdf_dir }}/plugins/nodejs"
+    - name: Add Starship to .zshrc
+      lineinfile:
+        path: "{{ user_home }}/.zshrc"
+        line: 'eval "$(starship init zsh)"'
+        create: yes
+        owner: "{{ user_name }}"
+
+
+    - name: Install Global Tools using mise (Node, Starship, Duf, YQ)
+      shell: "~/.local/bin/mise use --global node@latest starship@latest duf@latest yq@latest"
       become: yes
       become_user: "{{ user_name }}"
 
-    - name: Install Latest Nodejs
+    - name: Install Global NPM Tools (Claude, Gemini, TLDR)
       shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        asdf install nodejs latest
-        asdf global nodejs latest
-      become: yes
-      become_user: "{{ user_name }}"
-
-    - name: Install AI CLI Tools (Claude Code, Gemini CLI)
-      shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        npm list -g @anthropic-ai/claude-code || npm install -g @anthropic-ai/claude-code
-        npm list -g @google/gemini-cli || npm install -g @google/gemini-cli
+        export PATH="$HOME/.local/bin:$PATH"
+        mise x -- npm list -g @anthropic-ai/claude-code || mise x -- npm install -g @anthropic-ai/claude-code
+        mise x -- npm list -g @google/gemini-cli || mise x -- npm install -g @google/gemini-cli
+        mise x -- npm list -g tldr || mise x -- npm install -g tldr
       become: yes
       become_user: "{{ user_name }}"
       register: ai_tools_install

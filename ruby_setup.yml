@@ -4,34 +4,25 @@
   vars:
     user_name: "wdek"
     user_home: "/home/{{ user_name }}"
-    asdf_dir: "{{ user_home }}/.asdf"
 
   tasks:
-    - name: Add Ruby plugin to ASDF
-      shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git
-      args:
-        creates: "{{ asdf_dir }}/plugins/ruby"
-      become: yes
-      become_user: "{{ user_name }}"
+    - name: Check if Ruby is installed via mise
+      shell: "~/.local/bin/mise x ruby -- ruby -v"
+      register: ruby_check
+      ignore_errors: yes
+      changed_when: false
 
-    - name: Install Latest Ruby (ASYNC - High Timeout for Mikrus)
-      shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        asdf install ruby latest
-        asdf global ruby latest
+    - name: Install Latest Ruby using mise (ASYNC - High Timeout for Mikrus)
+      shell: "~/.local/bin/mise use --global ruby@latest"
       become: yes
       become_user: "{{ user_name }}"
       async: 3600  # Czekamy max godzinę
       poll: 60     # Sprawdzamy co minutę
+      when: ruby_check.rc != 0
 
-    - name: Install Rails gem
+    - name: Install Rails gem using mise
       shell: |
-        export ASDF_DIR="{{ asdf_dir }}"
-        . "{{ asdf_dir }}/asdf.sh"
-        gem install rails
+        export PATH="$HOME/.local/bin:$PATH"
+        mise x ruby -- gem install rails
       become: yes
       become_user: "{{ user_name }}"

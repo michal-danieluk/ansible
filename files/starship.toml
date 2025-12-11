@@ -1,0 +1,12 @@
+add_newline = false
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜](bold red)"
+
+[systemd]
+disabled = true
+
+# Opcjonalnie: wyłączenie pokazywania wersji paczek (np. z package.json)
+# [package]
+# disabled = true
