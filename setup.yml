@@ -1,0 +1,149 @@
+---
+- name: Setup Mikrus VPS
+  hosts: vps
+  vars:
+    user_name: "wdek"
+    user_home: "/home/{{ user_name }}"
+    asdf_dir: "{{ user_home }}/.asdf"
+    # Pamiętaj, żeby podać --ask-vault-pass przy uruchamianiu playbooka
+    ssh_backup_file: "ssh_backup.tar.gz"
+
+  tasks:
+    - name: Update apt cache and install dependencies
+      apt:
+        update_cache: yes
+        name:
+          - git
+          - curl
+          - wget
+          - zsh
+          - unzip
+          - build-essential
+          - libssl-dev
+          - libreadline-dev
+          - zlib1g-dev
+          - software-properties-common
+          - docker.io  # Potrzebne, żeby istniała grupa docker
+        state: present
+
+    - name: Add Neovim PPA (unstable)
+      ansible.builtin.apt_repository:
+        repo: ppa:neovim-ppa/unstable
+        state: present
+
+    - name: Install Neovim
+      apt:
+        name: neovim
+        state: latest
+
+    - name: Create user {{ user_name }}
+      user:
+        name: "{{ user_name }}"
+        shell: /bin/zsh
+        groups: sudo,docker
+        append: yes
+        state: present
+
+    - name: Enable passwordless sudo for {{ user_name }}
+      lineinfile:
+        path: /etc/sudoers.d/{{ user_name }}
+        line: "{{ user_name }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Copy decrypted SSH backup to server
+      copy:
+        src: "{{ ssh_backup_file }}"
+        dest: "{{ user_home }}/{{ ssh_backup_file }}"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0600'
+
+    - name: Ensure .ssh directory exists
+      file:
+        path: "{{ user_home }}/.ssh"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0700'
+
+    - name: Extract SSH keys
+      unarchive:
+        src: "{{ user_home }}/{{ ssh_backup_file }}"
+        dest: "{{ user_home }}/"
+        remote_src: yes
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+
+    - name: Fix SSH permissions (files)
+      shell: "chmod 600 {{ user_home }}/.ssh/*"
+      # Ignorujemy błędy, jeśli katalog jest pusty, ale po rozpakowaniu nie powinien być
+      ignore_errors: yes
+
+    - name: Fix SSH permissions (directory)
+      file:
+        path: "{{ user_home }}/.ssh"
+        mode: '0700'
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+
+    - name: Install Oh-My-Zsh (unattended)
+      shell: |
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      args:
+        creates: "{{ user_home }}/.oh-my-zsh"
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Clone ASDF
+      git:
+        repo: https://github.com/asdf-vm/asdf.git
+        dest: "{{ asdf_dir }}"
+        version: v0.14.0  # Warto spinować wersję
+
+    - name: Add ASDF to .zshrc
+      lineinfile:
+        path: "{{ user_home }}/.zshrc"
+        line: '. "$HOME/.asdf/asdf.sh"'
+        create: yes
+        owner: "{{ user_name }}"
+
+    - name: Add Nodejs plugin to ASDF
+      shell: |
+        . {{ asdf_dir }}/asdf.sh
+        asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git || exit 0
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Add Ruby plugin to ASDF
+      shell: |
+        . {{ asdf_dir }}/asdf.sh
+        asdf plugin add ruby https://github.com/asdf-vm/asdf-ruby.git || exit 0
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Install Latest Nodejs
+      shell: |
+        . {{ asdf_dir }}/asdf.sh
+        asdf install nodejs latest
+        asdf global nodejs latest
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Install Latest Ruby (ASYNC - High Timeout for Mikrus)
+      shell: |
+        . {{ asdf_dir }}/asdf.sh
+        asdf install ruby latest
+        asdf global ruby latest
+      become: yes
+      become_user: "{{ user_name }}"
+      async: 3600  # Czekamy max godzinę
+      poll: 60     # Sprawdzamy co minutę
+
+    - name: Install Rails gem
+      shell: |
+        . {{ asdf_dir }}/asdf.sh
+        gem install rails
+      become: yes
+      become_user: "{{ user_name }}"
