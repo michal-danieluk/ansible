@@ -65,30 +65,6 @@
         name: zoxide
         state: present
 
-    - name: Prepare directory for eza keyring
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
-
-    - name: Download eza GPG key
-      get_url:
-        url: https://raw.githubusercontent.com/eza-community/eza/main/deb.asc
-        dest: /etc/apt/keyrings/gierens.gpg
-        mode: '0644'
-
-    - name: Add eza repository
-      apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main"
-        state: present
-        filename: eza
-
-    - name: Install eza
-      apt:
-        name: eza
-        state: latest
-        update_cache: yes
-
     # --- GitHub CLI Setup ---
     - name: Download GitHub CLI GPG key
       get_url:
