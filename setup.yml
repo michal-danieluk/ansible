@@ -103,6 +103,28 @@
         dest: /usr/local/bin/yq
         mode: '0755'
 
+    # --- Development Repositories ---
+    - name: Ensure ~/dev directory exists
+      file:
+        path: "{{ user_home }}/dev"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+
+    - name: Clone Development Repositories
+      git:
+        repo: "git@github.com:michal-danieluk/{{ item }}.git"
+        dest: "{{ user_home }}/dev/{{ item }}"
+        accept_hostkey: yes
+        update: yes
+      become: yes
+      become_user: "{{ user_name }}"
+      loop:
+        - adforge
+        - mdSvelte
+        - response-review
+
     - name: Create user {{ user_name }}
       user:
         name: "{{ user_name }}"
@@ -276,9 +298,12 @@
       shell: |
         export ASDF_DIR="{{ asdf_dir }}"
         . "{{ asdf_dir }}/asdf.sh"
-        npm install -g @anthropic-ai/claude-code @google/gemini-cli
+        npm list -g @anthropic-ai/claude-code || npm install -g @anthropic-ai/claude-code
+        npm list -g @google/gemini-cli || npm install -g @google/gemini-cli
       become: yes
       become_user: "{{ user_name }}"
+      register: ai_tools_install
+      changed_when: "'added' in ai_tools_install.stdout"
 
     - name: Configure Git Global User Name
       git_config:
