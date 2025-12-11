@@ -24,6 +24,7 @@
           - zlib1g-dev
           - software-properties-common
           - docker.io  # Potrzebne, żeby istniała grupa docker
+          - stow
         state: present
 
     - name: Add Neovim PPA (unstable)
@@ -87,6 +88,40 @@
         mode: '0700'
         owner: "{{ user_name }}"
         group: "{{ user_name }}"
+
+    - name: Ensure dotfiles directory structure for Stow
+      file:
+        path: "{{ user_home }}/dot/lazy/.config"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        recurse: yes
+
+    - name: Clone LazyVim starter
+      git:
+        repo: https://github.com/LazyVim/starter.git
+        dest: "{{ user_home }}/dot/lazy/.config/nvim"
+      become: yes
+      become_user: "{{ user_name }}"
+
+    - name: Ensure target .config directory exists
+      file:
+        path: "{{ user_home }}/.config"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+
+    - name: Remove existing .config/nvim (to allow Stow)
+      file:
+        path: "{{ user_home }}/.config/nvim"
+        state: absent
+
+    - name: Stow LazyVim
+      shell: "stow -v -d {{ user_home }}/dot -t {{ user_home }} lazy"
+      become: yes
+      become_user: "{{ user_name }}"
+      register: stow_result
+      changed_when: "'LINK' in stow_result.stderr"
 
     - name: Install Oh-My-Zsh (unattended)
       shell: |
