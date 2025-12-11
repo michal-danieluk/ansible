@@ -161,6 +161,14 @@
         owner: "{{ user_name }}"
         group: "{{ user_name }}"
 
+    - name: Copy local .tmux directory (plugins & themes)
+      copy:
+        src: .tmux/
+        dest: "{{ user_home }}/.tmux/"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+
     - name: Copy decrypted SSH backup to server
       copy:
         src: "{{ ssh_backup_file }}"
