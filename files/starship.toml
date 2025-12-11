@@ -4,7 +4,7 @@ add_newline = false
 success_symbol = "[➜](bold green)"
 error_symbol = "[➜](bold red)"
 
-[systemd]
+[container]
 disabled = true
 
 # Opcjonalnie: wyłączenie pokazywania wersji paczek (np. z package.json)
